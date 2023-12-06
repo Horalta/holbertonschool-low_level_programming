@@ -1,61 +1,93 @@
-#include "main.h"
 #include <stdio.h>
+#include <string.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 /**
- * error_file - checks if files can be opened.
- * @file_from: file_from.
- * @file_to: file_to.
- * @argv: arguments vector.
- * Return: no return.
+ * close_status - function
+ * @fd: file constructor
+ * Return: Nothing.
  */
-void error_file(int file_from, int file_to, char *argv[])
+void close_status(int fd)
 {
-	if (file_from == -1)
+	int status = close(fd);
+
+	if (status == -1)
 	{
-		dprintf(STDERR_FILENO, "Error: Can't read from file %s\n", argv[1]);
+		dprintf(STDERR_FILENO, "Error: Can't close fd %i", status);
+		exit(100);
+	}
+}
+
+/**
+ * write_buffer - function
+ * @dest: @buffer dest
+ * @buffer: buffer to write in @dest 1024 bytes
+ * @size: size of @buffer
+ * @av: arguments in main
+ * Return: Nothing.
+ */
+void write_buffer(int dest, char buffer[1024], int size, char **av)
+{
+	if (size == -1)
+	{
+		dprintf(STDERR_FILENO, "Error: Can't read from file %s\n", av[1]);
 		exit(98);
 	}
-	if (file_to == -1)
+
+	if (write(dest, buffer, size) == -1)
 	{
-		dprintf(STDERR_FILENO, "Error: Can't write to %s\n", argv[2]);
+		dprintf(STDERR_FILENO, "Error: Can't write to %s\n", av[2]);
 		exit(99);
 	}
 }
 
 /**
- * main - check the code for Holberton School students.
- * @argc: number of arguments.
- * @argv: arguments vector.
+ * main - check the code
+ * @ac: number of element in **av
+ * @av: array
  * Return: Always 0.
  */
-int main(int argc, char *argv[])
+int main(int ac, char **av)
 {
-	int file_from, file_to, err_close;
-	ssize_t nchars, nwr;
-	char buf[1024];
+	int src;
+	int dest;
+	char buffer[1024];
+	int size = 1;
 
-	if (argc != 3)
+	if (ac != 3)
 	{
-		dprintf(STDERR_FILENO, "%s\n", "Usage: cp file_from file_to");
+		dprintf(STDERR_FILENO, "Usage: cp file_from file_to\n");
 		exit(97);
 	}
 
-	file_from = open(argv[1], O_RDONLY);
-	file_to = open(argv[2], O_CREAT | O_WRONLY | O_TRUNC | O_APPEND, 0664);
-	error_file(file_from, file_to, argv);
+	src = open(av[1], O_RDONLY, 0664);
 
-	nchars = 1024;
-	while (nchars == 1024)
+	if (src == -1)
 	{
-		nchars = read(file_from, buf, 1024);
-		if (nchars == -1)
-			error_file(-1, 0, argv);
-		nwr = write(file_to, buf, nchars);
-		if (nwr == -1)
-			error_file(0, -1, argv);
+		dprintf(STDERR_FILENO, "Error: Can't read from file %s\n", av[1]);
+		exit(98);
 	}
 
-	err_close = close(file_from);
-	if (err_close == -1)
-	{
+	dest = open(av[2], O_CREAT | O_WRONLY | O_TRUNC, 0664);
 
+	if (dest == -1)
+	{
+		dprintf(STDERR_FILENO, "Error: Can't write to %s\n", av[2]);
+		exit(99);
+	}
+
+	while (size != 0)
+	{
+		size = read(src, buffer, 1024);
+		write_buffer(dest, buffer, size, av);
+	}
+
+	close_status(src);
+	close_status(dest);
+	return (0);
+}
